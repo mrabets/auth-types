@@ -6,17 +6,14 @@ require 'securerandom'
 
 AVAILABLE_TOKENS = []
 
+def current_cookie_token
+  request.cookies["token"]
+end
+
 def generate_token
-  SecureRandom.hex.tap { |token| AVAILABLE_TOKENS.push(token) }
-end
-
-def current_bearer_token
-  # delete "Bearer ""
-  http_auth_data[7..]
-end
-
-def http_auth_data
-  request.env["HTTP_AUTHORIZATION"]
+  new_token = SecureRandom.hex
+  AVAILABLE_TOKENS.push(new_token)
+  response.set_cookie("token", new_token)
 end
 
 before do
@@ -24,9 +21,9 @@ before do
 end
 
 get '/' do
-  if http_auth_data.nil?
-    generate_token
-  elsif AVAILABLE_TOKENS.include?(current_bearer_token)
+  generate_token unless current_cookie_token
+
+  if AVAILABLE_TOKENS.include?(current_cookie_token)
     'Success! :)'
   else
     'Failed :('
